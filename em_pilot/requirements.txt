@@ -1,0 +1,14 @@
+# Tested on CPU with: torch 2.15.0, transformers 5.24.0, peft 0.22.0, scikit-learn 1.9.1
+torch>=2.3
+transformers>=4.48   # OLMo-2 support
+peft>=0.13
+accelerate
+datasets
+scikit-learn
+scipy
+matplotlib
+pyyaml
+pandas
+openai
+huggingface_hub
+easy-dataset-share   # decrypts the Turner et al. datasets

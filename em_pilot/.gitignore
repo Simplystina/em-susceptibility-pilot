@@ -1,0 +1,9 @@
+# decrypted datasets and the cloned repository: never commit these
+external/
+# run outputs (commit summaries and figures by hand, not adapters or raw generations)
+runs/
+runs_dry/
+*.safetensors
+__pycache__/
+.ipynb_checkpoints/
+.env
