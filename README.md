@@ -14,11 +14,15 @@ The hypotheses, definitions and tests are fixed in [`PREREGISTRATION.md`](PREREG
 | `em_pilot_v2.ipynb` | The notebook you run, stage by stage |
 | `emlib.py` | All training, sampling, judging, statistics and plotting code |
 | `worker.py` | One GPU worker; the notebook starts one per GPU |
+| `hand_check.py` | Blind hand check of the judge: makes the sheet you label and scores it |
 | `PREREGISTRATION.md` | Hypotheses and analysis plan, committed before the full run |
 | `DEVIATIONS.md` | Every change from the preregistration, with its reason |
 | `requirements.txt` | Package versions |
 
+## Before you run anything
 
+1. Put your name in `PREREGISTRATION.md`.
+2. Create a GitHub repository, add these files, and push. The commit time of `PREREGISTRATION.md` is your evidence that the plan came before the results. The repository can stay private until you are ready to share it.
 
 ## Running on Kaggle
 
@@ -32,10 +36,11 @@ Kaggle gives two T4 GPUs (16 GB each), 12-hour sessions, 20 GB of saved output a
 ### One-time setup
 
 1. Verify your phone number in Kaggle settings (needed for GPU and internet).
-2. **Datasets > New Dataset**: upload `emlib.py`, `worker.py` and `PREREGISTRATION.md`. Keep it private. Call it `em-pilot-code`.
+2. **Datasets > New Dataset**: upload `emlib.py`, `worker.py`, `hand_check.py` and `PREREGISTRATION.md`. Keep it private. Call it `em-pilot-code`.
 3. **Create > New Notebook**, then **File > Import Notebook** and choose `em_pilot_v2.ipynb`.
 4. In the notebook's right-hand panel: **Accelerator: GPU T4 x2**, **Internet: on**, **Add Input**: your `em-pilot-code` dataset.
-5. **Add-ons > Secrets**: add `OPENAI_API_KEY` and tick it for this notebook.
+5. In section 4 of the notebook, set `JUDGE = "hf"` (the free judge).
+6. Optional, about $1 of OpenAI credit: **Add-ons > Secrets**, add `OPENAI_API_KEY` and tick it for this notebook. It is used only to check the free judge against GPT-4o on 300 answers (section 8b).
 
 ### The sequence of versions
 
@@ -45,13 +50,14 @@ Use **Save Version > Save & Run All (Commit)** for every step. Batch runs do not
 |---|---|---|---|
 | 1. Dry run | GPU T4 x2 | `DRY_RUN = True`, all four stages in `PLAN` | Nothing |
 | 2. Anchor | GPU T4 x2 | `DRY_RUN = False`, `PLAN = ["anchor_gpu"]` | Nothing |
-| 3. Judge anchor | **None (CPU)** | `PLAN = ["anchor_judge"]` | Add Input: the output of version 2 |
+| 3. Judge anchor | GPU T4 x2 | `PLAN = ["anchor_judge"]` | Add Input: the output of version 2 |
 | 4, 5, ... Experiment B | GPU T4 x2 | `PLAN = ["susc_gpu"]` | Add Input: the output of the latest version |
-| Last. Results | **None (CPU)** | `PLAN = ["susc_judge"]` | Add Input: the output of the latest version |
+| Last. Results | GPU T4 x2 | `PLAN = ["susc_judge"]` | Add Input: the output of the latest version |
 
 * To attach a previous output: **Add Input > Your Work > Notebook Outputs**, choose this notebook, then pick the version. Attach only the latest one: each version's output already contains everything before it.
 * Repeat the `susc_gpu` version until the log says every worker finished. If a session runs out of time, the log says `stopped for time`; the next version picks up where it stopped.
-* Judging with GPT-4o needs no GPU, so run the judging stages on CPU and save your GPU quota.
+* The free judge (`JUDGE = "hf"`) runs on the GPUs, so the judging versions need the GPU accelerator. Only if you score everything with GPT-4o can judging run on CPU.
+* Before the dry run, test the free judge once: `DRY_RUN = True`, `JUDGE = "hf"`, all stages in `PLAN`.
 
 ### After the dry run
 
@@ -61,11 +67,19 @@ Check two things:
 
 The dry-run numbers themselves mean nothing: they come from 10 training steps and a handful of samples.
 
-## Judge cost
+## The judge
 
-The full run samples roughly 20,000 answers, each scored twice (alignment and coherence), so about 40,000 GPT-4o calls with short prompts and one output token each. Check current OpenAI pricing for `gpt-4o-2024-08-06` before you start. The judge cache means nothing is ever scored twice, even across sessions.
+**Default: the free judge.** `JUDGE = "hf"` scores answers with Qwen2.5-7B-Instruct spread over both T4s, with the published judge prompts. No API key or payment is needed; it costs GPU quota instead (roughly 8 to 10 GPU hours for the full run, a rough estimate).
 
-A cheaper local judge (`JUDGE = "hf"`, Qwen2.5-7B-Instruct spread over both T4s) is supported, but it is not the published judge. If you use it, run section 8b to measure its agreement with GPT-4o on 300 answers and report that agreement.
+**Checking it against GPT-4o (optional, about $1).** With `OPENAI_API_KEY` set as a Kaggle Secret, section 8b scores 300 anchor answers with both judges and saves `runs/judge_validation.json`. Set a $5 monthly budget in your OpenAI account so it can never charge more. The published judge, `gpt-4o-2024-08-06`, is available until 14 January 2027.
+
+**Your blind hand check (do this whatever else you do).** Section 8c writes `hand_check.csv`: 100 answers with the judge's scores hidden. Label each answer `yes` or `no` for *misaligned* and *coherent*, save it as `hand_check_filled.csv`, add it to your code dataset, and section 8d compares your verdicts with the judge's. Report precision and NPV, not just agreement, because the sample deliberately over-represents answers the judge flagged. It also runs on a laptop without a GPU:
+
+```bash
+python hand_check.py hand_check_filled.csv hand_check_key.json
+```
+
+In the proposal, one clause covers it: "scored with an open-weight judge, checked by hand on 100 answers (precision X, NPV Y)".
 
 ## What to publish, and what not to
 

@@ -1,6 +1,6 @@
 # Preregistration: pilot for "When Does a Model Become Prone to Emergent Misalignment?"
 
-**Author:** Chidinma Nwatu
+**Author:** [Your name]
 **Written:** before any full-scale run. The Git commit that adds this file is its timestamp.
 **Code:** `emlib.py` and `em_pilot_v2.ipynb` in this repository, at the same commit.
 
