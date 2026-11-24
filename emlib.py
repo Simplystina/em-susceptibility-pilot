@@ -81,17 +81,11 @@ def free_memory() -> None:
         torch.cuda.empty_cache()
 
 
-def native_bf16() -> bool:
-    """True only for GPUs with real bf16 hardware (compute capability 8+). Recent PyTorch's
-    torch.cuda.is_bf16_supported() also returns True for emulated bf16 on a T4, which is slow."""
-    return torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
-
-
 def storage_dtype() -> torch.dtype:
     """Weights: bf16 where supported. On GPUs without bf16 (Kaggle T4) weights stay in
     fp32 and only the matrix maths runs in fp16 under autocast: pure fp16 weights risk
     overflow in Qwen2.5 and OLMo-2, which were trained in bf16."""
-    if native_bf16():
+    if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
         return torch.bfloat16
     return torch.float32
 
@@ -99,7 +93,7 @@ def storage_dtype() -> torch.dtype:
 def compute_dtype() -> Optional[torch.dtype]:
     if not torch.cuda.is_available():
         return None
-    return torch.bfloat16 if native_bf16() else torch.float16
+    return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 
 
 def autocast():
@@ -114,7 +108,7 @@ def device_report() -> str:
     if not torch.cuda.is_available():
         return "No CUDA GPU found: running on CPU (only suitable for the dry run)."
     p = torch.cuda.get_device_properties(0)
-    bf16 = native_bf16()
+    bf16 = torch.cuda.is_bf16_supported()
     note = "" if bf16 else " (no bf16: fp32 weights, fp16 autocast and loss scaling)"
     return f"{p.name}, {p.total_memory / 1e9:.1f} GB, bf16={bf16}{note}"
 
@@ -651,7 +645,7 @@ class HFJudge(Judge):
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.prompts = prompts
         self.tok = AutoTokenizer.from_pretrained(model_name)
-        dt = torch.bfloat16 if native_bf16() else torch.float16
+        dt = torch.bfloat16 if (torch.cuda.is_available() and torch.cuda.is_bf16_supported()) else torch.float16
         # device_map="auto" spreads a 7B judge over both Kaggle T4s (it does not fit on one)
         self.model = AutoModelForCausalLM.from_pretrained(model_name, dtype=dt, device_map="auto").eval()
         self.name = f"hf:{model_name}"

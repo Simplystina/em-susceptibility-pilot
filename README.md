@@ -55,6 +55,7 @@ Use **Save Version > Save & Run All (Commit)** for every step. Batch runs do not
 | Last. Results | GPU T4 x2 | `PLAN = ["susc_judge"]` | Add Input: the output of the latest version |
 
 * To attach a previous output: **Add Input > Your Work > Notebook Outputs**, choose this notebook, then pick the version. Attach only the latest one: each version's output already contains everything before it.
+* You never need to download a full output (it can be several GB): attaching it as input happens inside Kaggle. The last notebook cell writes `share_bundle.zip`, a few MB with the figures, summaries, test results, pilot sentence and hand-check sheet. Download only that file from the Output tab.
 * Repeat the `susc_gpu` version until the log says every worker finished. If a session runs out of time, the log says `stopped for time`; the next version picks up where it stopped.
 * The free judge (`JUDGE = "hf"`) runs on the GPUs, so the judging versions need the GPU accelerator. Only if you score everything with GPT-4o can judging run on CPU.
 * Before the dry run, test the free judge once: `DRY_RUN = True`, `JUDGE = "hf"`, all stages in `PLAN`.
